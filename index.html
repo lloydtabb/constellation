@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -11,344 +11,43 @@
 <link rel="manifest" href="manifest.json">
 <title>Constellation</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: #030510; display: flex; align-items: center; justify-content: center; font-family: monospace; overflow: hidden; overscroll-behavior: none; }
-#app { width: 100%; max-width: 420px; background: #060818; display: flex; flex-direction: column; height: 100vh; height: 100dvh; max-height: 780px; border-radius: 16px; overflow: hidden; }
-
-/* Phone / narrow screens: fill the whole browser, edge to edge, under the notch */
-@media (max-width: 480px), (max-height: 520px) {
-  #app { max-width: none; max-height: none; height: 100vh; height: 100dvh; border-radius: 0; }
-  #toolbar { padding-top: calc(10px + env(safe-area-inset-top)); }
-  #new-btn-wrap { padding-bottom: calc(4px + env(safe-area-inset-bottom)); }
-}
-#toolbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #0a0f2a; border-bottom: 1px solid #1a2a55; flex-shrink: 0; }
-#word-row { display: flex; gap: 7px; flex-wrap: wrap; }
-.tile { width: 28px; height: 28px; border-radius: 5px; border: 1px solid #2a3a6a; background: #0d1530; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #4466aa; transition: all 0.3s; }
-.tile.found { border-color: #4488ff; color: #99ccff; background: #0d1f4a; box-shadow: 0 0 8px #2244aa55; }
-#word-row.win .tile { border-color: #66ffaa; color: #bbffdd; background: #0d2a1a; animation: winpulse 1.1s ease-in-out infinite; }
-@keyframes winpulse { 0%,100% { box-shadow: 0 0 6px #33cc6655; } 50% { box-shadow: 0 0 16px #33cc66dd; } }
-#btns { display: flex; gap: 7px; flex-shrink: 0; }
-button { background: #0d1530; border: 1px solid #2a3a6a; border-radius: 6px; color: #6688bb; font-family: monospace; font-size: 11px; padding: 5px 11px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-button:active { opacity: 0.7; }
-#reveal-btn { background: #1a1000; border-color: #664422; color: #cc9944; }
-#canvas-wrap { position: relative; flex: 1; overflow: hidden; }
-canvas { display: block; width: 100%; height: 100%; }
-#ref { display: none; position: absolute; top: 8px; right: 8px; background: rgba(8,12,36,0.96); border: 1px solid #1a2a5a; border-radius: 10px; padding: 10px; z-index: 10; max-height: 90%; overflow-y: auto; }
-#ref.open { display: block; }
-#ref-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 5px; }
-.rc { display: flex; flex-direction: column; align-items: center; }
-.rl { color: #445588; font-size: 9px; }
-#msg { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); color: #ffd080; font-size: 14px; pointer-events: none; opacity: 0; transition: opacity 0.4s; white-space: nowrap; text-shadow: 0 0 12px #aa7700; }
-#hint { text-align: center; padding: 6px; color: #1e2e44; font-size: 10px; flex-shrink: 0; }
-#new-btn-wrap { text-align: center; padding: 4px; flex-shrink: 0; }
-#new-btn { background: #0d1530; border: 1px solid #1a2a55; border-radius: 6px; color: #334466; font-family: monospace; font-size: 10px; padding: 3px 10px; cursor: pointer; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { min-height: 100%; background: #030510; font-family: monospace; color: #8aa6d8; }
+  body { display: flex; align-items: center; justify-content: center; padding: 24px; }
+  main { width: 100%; max-width: 460px; }
+  h1 { color: #cfe0ff; font-size: 24px; font-weight: normal; letter-spacing: 3px; margin-bottom: 6px; }
+  p.lead { color: #4a5e88; font-size: 12px; margin-bottom: 22px; line-height: 1.5; }
+  a.card { display: block; text-decoration: none; background: #0a0f2a; border: 1px solid #1a2a55;
+    border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; transition: border-color 0.2s, background 0.2s; }
+  a.card:hover { border-color: #3a5aaa; background: #0d1430; }
+  a.card b { display: block; color: #aaccff; font-size: 15px; font-weight: normal; margin-bottom: 4px; }
+  a.card span { display: block; color: #54688f; font-size: 11px; line-height: 1.5; }
+  footer { margin-top: 18px; color: #2e3e5e; font-size: 10px; line-height: 1.6; }
+  footer code { color: #4a5e88; }
 </style>
 </head>
 <body>
-<div id="app">
-  <div id="toolbar">
-    <div id="word-row"></div>
-    <div id="btns">
-      <button id="reveal-btn" onclick="toggleReveal()">reveal</button>
-      <button onclick="document.getElementById('ref').classList.toggle('open')">A–Z ▾</button>
-    </div>
-  </div>
-  <div id="canvas-wrap">
-    <canvas id="canvas"></canvas>
-    <div id="ref"><div id="ref-grid"></div></div>
-    <div id="msg"></div>
-  </div>
-  <div id="hint">tap a star to find it · drag to connect stars</div>
-  <div id="new-btn-wrap"><button id="new-btn" onclick="newGame()">new word ↺</button></div>
-</div>
+<main>
+  <h1>✦ Constellation</h1>
+  <p class="lead">A star-field word game. Pick a variant to play — each one has a <b style="display:inline;color:#88aadd">⚙</b> dev panel (top-left) to tune parameters live and copy the settings.</p>
 
-<script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-let W, H;
+  <a class="card" href="variants/classic.html">
+    <b>Classic</b>
+    <span>Balanced default. Word letters hidden among decoy constellations.</span>
+  </a>
+  <a class="card" href="variants/noise-stars.html">
+    <b>Noise stars</b>
+    <span>Adds loose distractor stars that aren't part of any letter, with fewer decoys.</span>
+  </a>
+  <a class="card" href="variants/hard-skew.html">
+    <b>Hard skew</b>
+    <span>Heavier rotation, skew, and scale variance — letters are harder to read.</span>
+  </a>
 
-function resize() {
-  const wrap = document.getElementById('canvas-wrap');
-  W = wrap.clientWidth;
-  H = wrap.clientHeight;
-  canvas.width = W;
-  canvas.height = H;
-  place();
-}
-
-const DEFS = {
-  A:{pts:[[1,0],[0,4],[2,4],[0.5,2.5],[1.5,2.5]],edges:[[0,1],[0,2],[3,4]]},
-  B:{pts:[[0,0],[0,4],[1.8,1],[0,2],[1.8,3]],edges:[[0,1],[0,2],[2,3],[3,4],[4,1]]},
-  C:{pts:[[2,0],[0,0],[0,4],[2,4]],edges:[[0,1],[1,2],[2,3]]},
-  D:{pts:[[0,0],[0,4],[2,2]],edges:[[0,1],[0,2],[1,2]]},
-  E:{pts:[[2,0],[0,0],[0,4],[2,4],[0,2],[1.5,2]],edges:[[0,1],[1,2],[2,3],[2,4],[4,5]]},
-  F:{pts:[[2,0],[0,0],[0,4],[0,2],[1.5,2]],edges:[[0,1],[1,2],[3,4]]},
-  G:{pts:[[2,0],[0,0],[0,4],[2,4],[2,2],[1,2]],edges:[[0,1],[1,2],[2,3],[3,4],[4,5]]},
-  H:{pts:[[0,0],[0,4],[2,0],[2,4],[0,2],[2,2]],edges:[[0,1],[2,3],[4,5]]},
-  I:{pts:[[0,0],[2,0],[1,0],[1,4],[0,4],[2,4]],edges:[[0,1],[2,3],[4,5]]},
-  J:{pts:[[0,0],[2,0],[2,3],[1,4],[0,3]],edges:[[0,1],[1,2],[2,3],[3,4]]},
-  K:{pts:[[0,0],[0,4],[2,0],[0,2],[2,4]],edges:[[0,1],[2,3],[3,4]]},
-  L:{pts:[[0,0],[0,4],[2,4]],edges:[[0,1],[1,2]]},
-  M:{pts:[[0,4],[0,0],[1,2],[2,0],[2,4]],edges:[[0,1],[1,2],[2,3],[3,4]]},
-  N:{pts:[[0,4],[0,0],[2,4],[2,0]],edges:[[0,1],[1,2],[2,3]]},
-  O:{pts:[[0,0],[2,0],[2,4],[0,4]],edges:[[0,1],[1,2],[2,3],[3,0]]},
-  P:{pts:[[0,0],[0,4],[2,0],[2,2],[0,2]],edges:[[0,1],[0,2],[2,3],[3,4]]},
-  R:{pts:[[0,0],[0,4],[2,0],[2,2],[0,2],[2,4]],edges:[[0,1],[0,2],[2,3],[3,4],[4,5]]},
-  S:{pts:[[2,0],[0,0],[0,2],[2,2],[2,4],[0,4]],edges:[[0,1],[1,2],[2,3],[3,4],[4,5]]},
-  T:{pts:[[0,0],[2,0],[1,0],[1,4]],edges:[[0,1],[2,3]]},
-  U:{pts:[[0,0],[0,4],[2,4],[2,0]],edges:[[0,1],[1,2],[2,3]]},
-  V:{pts:[[0,0],[1,4],[2,0]],edges:[[0,1],[1,2]]},
-  W:{pts:[[0,0],[0.5,4],[1,2],[1.5,4],[2,0]],edges:[[0,1],[1,2],[2,3],[3,4]]},
-  X:{pts:[[0,0],[2,4],[1,2],[0,4],[2,0]],edges:[[0,1],[3,4]]},
-  Y:{pts:[[0,0],[1,2],[2,0],[1,4]],edges:[[0,1],[2,1],[1,3]]},
-  Z:{pts:[[0,0],[2,0],[0,4],[2,4]],edges:[[0,1],[1,2],[2,3]]},
-};
-
-const WORDS = ['STAR','MOON','NOVA','MARS','FLUX','GUST','COMET','ORBIT','VEGA','BLAZE','STORM','NIGHT','FROST'];
-
-let WORD, WORD_SET;
-let revealed = false;
-let cons = [], bgStars = [];
-let hov = null, dragging = false, dragA = null, dragB = null;
-let found = new Set();
-let touchId = null;
-
-function ekey(a,b){ return a<b?`${a}-${b}`:`${b}-${a}`; }
-
-function tx(pts,cx,cy,sc,ang,skx,sky){
-  return pts.map(([x,y])=>{
-    const nx=x*sc+y*skx, ny=y*sc+x*sky;
-    return [cx+nx*Math.cos(ang)-ny*Math.sin(ang), cy+nx*Math.sin(ang)+ny*Math.cos(ang)];
-  });
-}
-
-function place(){
-  if(!W||!H) return;
-  cons=[];
-  const cols=3, rows=4, cw=W/cols, ch=H/rows;
-  const cells=[];
-  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) cells.push([c,r]);
-  cells.sort(()=>Math.random()-0.5);
-  const wl=[...WORD_SET];
-  const decoyCount=Math.max(0, cells.length - wl.length);
-  const ex=Object.keys(DEFS).filter(l=>!WORD_SET.has(l)).sort(()=>Math.random()-0.5).slice(0,decoyCount);
-  // Word letters first so the slice below can never drop them; shuffled cells randomize positions.
-  const all=[...wl,...ex];
-  all.slice(0,cells.length).forEach((letter,i)=>{
-    const [col,row]=cells[i];
-    const sc=Math.min(cw,ch)*0.2+Math.random()*6;
-    const ang=(Math.random()-0.5)*0.75;
-    const skx=(Math.random()-0.5)*0.5;
-    const sky=(Math.random()-0.5)*0.4;
-    // Transform around the origin, then center the shape's bounding box on the cell.
-    let placed=tx(DEFS[letter].pts,0,0,sc,ang,skx,sky);
-    let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
-    for(const [x,y] of placed){ if(x<minx)minx=x; if(x>maxx)maxx=x; if(y<miny)miny=y; if(y>maxy)maxy=y; }
-    const targetX=col*cw+cw/2+(Math.random()-0.5)*cw*0.3;
-    const targetY=row*ch+ch/2+(Math.random()-0.5)*ch*0.3;
-    let dx=targetX-(minx+maxx)/2, dy=targetY-(miny+maxy)/2;
-    minx+=dx; maxx+=dx; miny+=dy; maxy+=dy;
-    // Keep the whole constellation inside the visible canvas: shift it back in by its overflow.
-    const M=10;
-    if(minx<M) dx+=M-minx; else if(maxx>W-M) dx+=(W-M)-maxx;
-    if(miny<M) dy+=M-miny; else if(maxy>H-M) dy+=(H-M)-maxy;
-    placed=placed.map(([x,y])=>[x+dx,y+dy]);
-    cons.push({
-      letter, stars:placed.map(([x,y])=>({x,y})),
-      edges:DEFS[letter].edges, drawn:new Set(), done:false,
-      isWord:WORD_SET.has(letter)
-    });
-  });
-  bgStars=[];
-  for(let i=0;i<180;i++) bgStars.push({x:Math.random()*W,y:Math.random()*H,r:0.4+Math.random()*1,t:Math.random()*Math.PI*2});
-}
-
-function getStarAt(mx,my){
-  let best=null, bestD=900;
-  for(const con of cons){
-    if(!con.isWord) continue;
-    for(let i=0;i<con.stars.length;i++){
-      const s=con.stars[i],dx=s.x-mx,dy=s.y-my,d=dx*dx+dy*dy;
-      if(d<bestD){bestD=d;best={con,idx:i};}
-    }
-  }
-  return best;
-}
-
-function checkDone(con){
-  if(con.done) return;
-  if(con.edges.every(([a,b])=>con.drawn.has(ekey(a,b)))){
-    con.done=true; found.add(con.letter); updateTiles();
-    if(found.size===WORD_SET.size){
-      document.getElementById('word-row').classList.add('win');
-      setTimeout(()=>flash('✦ '+WORD+' complete! ✦',true),100);
-    } else flash(con.letter+' found!');
-  }
-}
-
-let t0=performance.now();
-function draw(now){
-  const t=(now-t0)*0.001;
-  ctx.clearRect(0,0,W,H);
-  ctx.fillStyle='#060818'; ctx.fillRect(0,0,W,H);
-
-  bgStars.forEach(s=>{
-    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
-    ctx.fillStyle=`rgba(160,180,255,${0.08+0.14*Math.sin(t*0.8+s.t)})`; ctx.fill();
-  });
-
-  cons.forEach(con=>{
-    if(revealed){
-      con.edges.forEach(([a,b])=>{
-        const sa=con.stars[a],sb=con.stars[b];
-        ctx.beginPath(); ctx.moveTo(sa.x,sa.y); ctx.lineTo(sb.x,sb.y);
-        ctx.strokeStyle=con.isWord?'rgba(80,210,120,0.55)':'rgba(55,55,85,0.18)';
-        ctx.lineWidth=1; ctx.stroke();
-      });
-    }
-    con.drawn.forEach(key=>{
-      const [ai,bi]=key.split('-').map(Number);
-      const sa=con.stars[ai],sb=con.stars[bi];
-      const ok=con.edges.some(([a,b])=>ekey(a,b)===key);
-      ctx.beginPath(); ctx.moveTo(sa.x,sa.y); ctx.lineTo(sb.x,sb.y);
-      ctx.strokeStyle=ok?'rgba(100,160,255,0.85)':'rgba(200,80,80,0.5)';
-      ctx.lineWidth=1.5; ctx.stroke();
-    });
-    con.stars.forEach((s,i)=>{
-      const isHov=con.isWord&&hov&&hov.con===con&&hov.idx===i;
-      const isDrag=con.isWord&&((dragA&&dragA.con===con&&dragA.idx===i)||(dragB&&dragB.con===con&&dragB.idx===i));
-      const lit=isHov||isDrag;
-      let r,color,gb=0,gc='transparent';
-      if(!con.isWord){
-        r=1.5; color=revealed?'rgba(75,75,105,0.35)':'rgba(110,125,165,0.11)';
-      } else if(con.done){
-        r=4; color='rgba(100,225,140,0.95)'; gb=8; gc='#33cc66';
-      } else if(lit){
-        r=7; color='#eef4ff'; gb=20; gc='#55aaff';
-      } else if(con.drawn.size>0){
-        r=4; color='rgba(100,150,255,0.9)'; gb=6; gc='#3355cc';
-      } else {
-        r=3.5; color='rgba(150,175,255,0.65)';
-      }
-      ctx.beginPath(); ctx.arc(s.x,s.y,r,0,Math.PI*2);
-      ctx.shadowBlur=gb; ctx.shadowColor=gc;
-      ctx.fillStyle=color; ctx.fill(); ctx.shadowBlur=0;
-    });
-  });
-
-  if(dragging&&dragA&&dragB&&dragA.con===dragB.con&&dragA.idx!==dragB.idx){
-    const sa=dragA.con.stars[dragA.idx], ea=dragB.con.stars[dragB.idx];
-    ctx.beginPath(); ctx.moveTo(sa.x,sa.y); ctx.lineTo(ea.x,ea.y);
-    ctx.strokeStyle='rgba(140,195,255,0.5)'; ctx.lineWidth=1.2;
-    ctx.setLineDash([5,5]); ctx.stroke(); ctx.setLineDash([]);
-  }
-  requestAnimationFrame(draw);
-}
-
-function getPos(e, touch){
-  const r=canvas.getBoundingClientRect(), sx=W/r.width, sy=H/r.height;
-  const src=touch||e;
-  return [(src.clientX-r.left)*sx, (src.clientY-r.top)*sy];
-}
-
-canvas.addEventListener('mousemove',e=>{
-  const[x,y]=getPos(e); hov=getStarAt(x,y);
-  if(dragging) dragB=hov;
-});
-canvas.addEventListener('mousedown',e=>{
-  const[x,y]=getPos(e),s=getStarAt(x,y);
-  if(s){dragging=true;dragA=s;dragB=s;}
-});
-canvas.addEventListener('mouseup',()=>{
-  if(dragging&&dragA&&dragB&&dragA.con===dragB.con&&dragA.idx!==dragB.idx){
-    dragA.con.drawn.add(ekey(dragA.idx,dragB.idx)); checkDone(dragA.con);
-  }
-  dragging=false;dragA=null;dragB=null;
-});
-canvas.addEventListener('mouseleave',()=>{dragging=false;dragA=null;dragB=null;hov=null;});
-
-canvas.addEventListener('touchstart',e=>{
-  e.preventDefault();
-  const touch=e.changedTouches[0]; touchId=touch.identifier;
-  const[x,y]=getPos(e,touch),s=getStarAt(x,y);
-  if(s){dragging=true;dragA=s;dragB=s;}
-},{passive:false});
-
-canvas.addEventListener('touchmove',e=>{
-  e.preventDefault();
-  for(const touch of e.changedTouches){
-    if(touch.identifier===touchId){
-      const[x,y]=getPos(e,touch); hov=getStarAt(x,y);
-      if(dragging) dragB=hov;
-    }
-  }
-},{passive:false});
-
-canvas.addEventListener('touchend',e=>{
-  e.preventDefault();
-  if(dragging&&dragA&&dragB&&dragA.con===dragB.con&&dragA.idx!==dragB.idx){
-    dragA.con.drawn.add(ekey(dragA.idx,dragB.idx)); checkDone(dragA.con);
-  }
-  dragging=false;dragA=null;dragB=null;hov=null;touchId=null;
-},{passive:false});
-
-function buildTiles(){
-  const row=document.getElementById('word-row'); row.classList.remove('win'); row.innerHTML='';
-  WORD.split('').forEach(l=>{
-    const d=document.createElement('div'); d.className='tile'; d.dataset.letter=l; d.textContent=l;
-    row.appendChild(d);
-  });
-}
-function updateTiles(){
-  document.querySelectorAll('#word-row .tile').forEach(d=>{
-    if(found.has(d.dataset.letter)) d.classList.add('found');
-  });
-}
-function flash(txt,persist){
-  const el=document.getElementById('msg'); el.textContent=txt; el.style.opacity='1';
-  clearTimeout(flash._t);
-  if(!persist) flash._t=setTimeout(()=>el.style.opacity='0',1800);
-}
-function toggleReveal(){
-  revealed=!revealed;
-  document.getElementById('reveal-btn').textContent=revealed?'hide':'reveal';
-}
-function newGame(){
-  revealed=false;
-  document.getElementById('reveal-btn').textContent='reveal';
-  document.getElementById('msg').style.opacity='0';
-  found=new Set();
-  WORD=WORDS[Math.floor(Math.random()*WORDS.length)];
-  WORD_SET=new Set(WORD.split(''));
-  buildTiles(); place();
-}
-
-function buildRef(){
-  const grid=document.getElementById('ref-grid'),S=40,PAD=5,SC=(S-PAD*2)/4;
-  Object.entries(DEFS).forEach(([letter,{pts,edges}])=>{
-    const cell=document.createElement('div'); cell.className='rc';
-    const cv=document.createElement('canvas'); cv.width=S; cv.height=S;
-    const c=cv.getContext('2d');
-    const sc=pts.map(([x,y])=>[PAD+x*SC,PAD+y*SC]);
-    edges.forEach(([a,b])=>{
-      c.beginPath(); c.moveTo(sc[a][0],sc[a][1]); c.lineTo(sc[b][0],sc[b][1]);
-      c.strokeStyle='rgba(80,120,220,0.5)'; c.lineWidth=1; c.stroke();
-    });
-    sc.forEach(([x,y])=>{
-      c.beginPath(); c.arc(x,y,2,0,Math.PI*2);
-      c.fillStyle='#99bbff'; c.shadowBlur=4; c.shadowColor='#4477ff'; c.fill(); c.shadowBlur=0;
-    });
-    const lbl=document.createElement('div'); lbl.className='rl'; lbl.textContent=letter;
-    cell.appendChild(cv); cell.appendChild(lbl); grid.appendChild(cell);
-  });
-}
-
-WORD=WORDS[Math.floor(Math.random()*WORDS.length)];
-WORD_SET=new Set(WORD.split(''));
-buildTiles(); buildRef();
-window.addEventListener('resize', resize);
-resize();
-requestAnimationFrame(draw);
-</script>
+  <footer>
+    Variants live in <code>/variants</code>. Engine: <code>js/constellation.js</code> ·
+    presets &amp; tunables: <code>js/config.js</code>.
+  </footer>
+</main>
 </body>
 </html>
